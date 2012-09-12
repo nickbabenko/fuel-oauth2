@@ -19,7 +19,7 @@ class Model_Server_DB extends Model_Server
 
 	public function get_client(array $where)
 	{
-		$clients = \DB::select('name', 'client_id', 'auto_approve', 'redirect_uri')
+		$clients = \DB::select('name', 'redirect_uri')
 			->from(static::TABLE_CLIENT)
 			->where($where)
 			->limit(1)
@@ -31,7 +31,7 @@ class Model_Server_DB extends Model_Server
 
 	public function get_session(array $where)
 	{
-		$session = \DB::select('id', 'type_id')
+		$session = \DB::select('*')
 			->from(static::TABLE_SESSIONS)
 			->where($where)
 			->limit(1)
@@ -57,8 +57,8 @@ class Model_Server_DB extends Model_Server
 	public function has_user_authenicated_client($user_id, $client_id)
 	{
 		$tokens = \DB::select('access_token')
-			->where('client_id', $client_id)
-			->where('type_id', $user_id)
+			->where('client', $client_id)
+			->where('userid', $user_id)
 			->where('type', 'user')
 			->where('access_token', '!=', '')
 			->where('access_token', '!=', null)
@@ -99,7 +99,7 @@ class Model_Server_DB extends Model_Server
 			{
 				\DB::insert(static::TABLE_SESSION_SCOPES)
 					->set(array(
-						'session_id'	=>	$session_id,
+						'sessionid'	=>	$session_id,
 						'scope'			=>	$scope
 					));
 			}
@@ -129,7 +129,7 @@ class Model_Server_DB extends Model_Server
 		));
 
 		\DB::update(static::TABLE_SESSION_SCOPES)
-			->where('session_id', $session_id)
+			->where('sessionid', $session_id)
 			->set(array('access_token' => $access_token))
 			->execute();
 

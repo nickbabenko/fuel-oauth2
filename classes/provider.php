@@ -207,47 +207,46 @@ abstract class Provider
 
 				$return = get_object_vars(json_decode($response));
 				
-				/*
-				Fuck the request class
-				try
-				{
-					$request->set_header('Accept', 'application/json');
-					$request->set_method('POST');
-					$request = $request->execute();
-				}
-				catch (RequestException $e)
-				{
-					\Debug::dump($request->response());
-					exit;
-				}
-				catch (HttpNotFoundException $e)
-				{
-					\Debug::dump($request->response());
-					exit;
-				}
-			
-				$response = $request->response();
-				
-				logger(\Fuel::L_INFO, 'Access token response: '.print_r($body, true), __METHOD__);
-				
-				// Try to get the actual response, its hopefully an array
-				$body = $response->body();
-				*/
-				
 			break;
 			
 			default:
 				throw new \OutOfBoundsException("Method '{$this->method}' must be either GET or POST");
 		}
-		
+				
 		if (isset($return['error']))
 		{
 			throw new Exception($return);
 		}
-		
-
+	
 		return Token::forge('access', $return);
-
 	}
+	
+	public function signup(Token_Access $token)
+	{
+		$info = $this->get_user($token);
+		$user = new \Model_User();
+		
+		if($user->signup(
+			$info['firstname'],
+			$info['lastname'],
+			$info['email'],
+			null,
+			true
+		) === true)
+		{
+			$network = new \Model_User_Network();
+			
+			$network->ref = $this->name;
+			$network->auth_data = array('access_token' => (string)$token);
+			
+			$user->networks[] = $network;
+			
+			$user->save();
+						
+			return $user;
+		}
+	}
+	
+	abstract public function get_user(Token_Access $token);
 
 }

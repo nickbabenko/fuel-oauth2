@@ -23,6 +23,18 @@ class Server {
 	{
 		$this->model = $model === null ? new Model_Server_Db : $model;
 	}
+	
+	protected $session = null;
+	
+	public function session()
+	{
+		if($this->session == null)
+		{
+			$this->session = $this->validate_access_token($access_token);
+		}
+		
+		return $this->session;
+	}
 
 	/**************************************************************
 	//! Client stuff
@@ -81,9 +93,9 @@ class Server {
 			$code = md5(time().uniqid());
 			
 			$this->model->update_session(array(
-				'type_id'		=> $user_id,
+				'userid'		=> $user_id,
 				'type'			=> 'user',
-				'client_id'		=> $client_id,
+				'clientid'		=> $client_id,
 				'access_token'	=> $access_token
 			), array(
 				'code'			=> $code,
@@ -100,17 +112,17 @@ class Server {
 		{
 			// Delete any existing sessions just to be sure
 			$this->model->delete_session(array(
-				'client_id'		=> $client_id,
-				'type_id'		=> $user_id,
+				'clientid'		=> $client_id,
+				'userid'		=> $user_id,
 				'type'			=> 'user'
 			));
 		
 			$code = md5(time().uniqid());
 			
 			$this->model->new_session(array(
-				'client_id'			=> $client_id,
+				'clientid'			=> $client_id,
 				'redirect_uri'		=> $redirect_uri,
-				'type_id'			=> $user_id,
+				'userid'			=> $user_id,
 				'type'				=> 'user',
 				'code'				=> $code,
 				'first_requested'	=> time(),
@@ -186,14 +198,14 @@ class Server {
 	public function validate_access_token($access_token, $scopes = array())
 	{
 		// Validate the token exists
-		$session_id = $this->model->get_session(array(
+		$session = $this->model->get_session(array(
 			'access_token'	=>	$access_token
 		));
 		
 		// The access token doesn't exists
-		if ( ! $session_id)
+		if($session === null)
 		{
-			return false;
+			return null;
 		}
 
 		// The access token does exist, validate each scope
@@ -203,12 +215,14 @@ class Server {
 			{
 				if ( ! $this->model->has_scope($access_token, $scope))
 				{
-					return false;
+					return null;
 				}
 			}
 		}
 		
-		return true;
+		$this->session = $session;
+		
+		return $session;
 	}	
 	
 	/**
