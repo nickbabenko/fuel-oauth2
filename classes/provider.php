@@ -224,27 +224,51 @@ abstract class Provider
 	public function signup(Token_Access $token)
 	{
 		$info = $this->get_user($token);
-		$user = new \Model_User();
 		
-		if($user->signup(
-			$info['firstname'],
-			$info['lastname'],
-			$info['email'],
-			null,
-			true
-		) === true)
+		$user = \DB::select('users.id')
+			->from('users')
+			->join('user_networks')->on('user_networks.userid', '=', 'users.id')->on('user_networks.remote_userid', '=', \DB::expr('\'' . $info['uid'] . '\''))
+			->execute();
+					
+		if(count($user) > 0)
 		{
-			$network = new \Model_User_Network();
+			$user = \Model_User::find('first', array(
+				'where' => array(
+					'id' => $user[0]['id']
+				)
+			));
 			
-			$network->ref = $this->name;
-			$network->auth_data = array('access_token' => (string)$token);
+			if($user != null)
+			{
+				\Auth::instance()->complete_login($user);
 			
-			$user->networks[] = $network;
-			
-			$user->save();
-						
-			return $user;
+				return $user;
+			}
 		}
+		
+		$user = new \Model_User();
+		$user->profile = new \Model_User_Profile();
+				
+		$user->email = $info['email'];
+		$user->profile->firstname = $info['firstname'];
+		$user->profile->lastname = $info['lastname'];
+		$user->password = \Auth::instance()->hash_password('tempfromfacebook');
+		
+		$user->save();
+		
+		$network = new \Model_User_Network();
+		
+		$network->ref = $this->name;
+		$network->remote_userid = $info['uid'];
+		$network->auth_data = array('access_token' => (string)$token);
+		
+		$user->networks[] = $network;
+		
+		$user->save();
+		
+		\Auth::instance()->complete_login($user);
+						
+		return $user;
 	}
 	
 	abstract public function get_user(Token_Access $token);
