@@ -266,7 +266,7 @@ abstract class Provider
 		
 		$user->save();
 		
-		\Auth::instance()->complete_login($user);
+		\Auth::instance()->complete_login($user, true);
 						
 		return $user;
 	}
